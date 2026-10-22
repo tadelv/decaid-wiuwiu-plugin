@@ -33,9 +33,12 @@ tablet one of two ways:
 
 ```sh
 ./scripts/pack.sh                       # -> dist/wiuwiu.reaplugin.zip
-adb push dist/wiuwiu.reaplugin.zip /sdcard/Download/
+DECAID_HOST=<host>:8080 ./scripts/pack.sh --push   # ...and stage it on the tablet
 # on the tablet: Settings -> Plugins -> (menu) Install plugin -> From zip
 ```
+
+`DECAID_HOST` defaults to `localhost:8080`; set it whenever Decaid is not on the
+machine you are running the scripts from.
 
 Then enable it and pick a preset over REST:
 

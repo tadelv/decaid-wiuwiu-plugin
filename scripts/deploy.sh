@@ -23,7 +23,7 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 [ -f "$SRC/manifest.json" ] && [ -f "$SRC/plugin.js" ] || die "plugin files missing in $SRC"
 [ "$(adb devices | awk 'NR>1 && $2=="device"' | wc -l | tr -d ' ')" -gt 0 ] || die "no adb device attached"
 
-API_IP="$(curl -sf -m 5 "http://$HOST/api/v1/info" | sed -n 's/.*"localIp":"\([^"]*\)".*/\1/p')"
+API_IP="$(curl -sf -m 5 "http://$HOST/api/v1/info" 2>/dev/null | sed -n 's/.*"localIp":"\([^"]*\)".*/\1/p' || true)"
 [ -n "$API_IP" ] || die "cannot read localIp from http://$HOST/api/v1/info"
 
 # Pick the attached device that owns the API's address. More than one Decaid can be

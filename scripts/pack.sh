@@ -17,7 +17,7 @@ unzip -l "$ROOT/dist/$ID.zip"
 printf '\nbuilt %s\n' "$ROOT/dist/$ID.zip"
 
 if [ "${1:-}" = "--push" ]; then
-  API_IP="$(curl -sf -m 5 "http://$HOST/api/v1/info" | sed -n 's/.*"localIp":"\([^"]*\)".*/\1/p')"
+  API_IP="$(curl -sf -m 5 "http://$HOST/api/v1/info" 2>/dev/null | sed -n 's/.*"localIp":"\([^"]*\)".*/\1/p' || true)"
   [ -n "$API_IP" ] || { echo "cannot read localIp from http://$HOST/api/v1/info" >&2; exit 1; }
   for candidate in $(adb devices | awk 'NR>1 && $2=="device"{print $1}'); do
     if adb -s "$candidate" shell ip -4 addr show 2>/dev/null | tr -d '\r' | grep -q "inet $API_IP/"; then
