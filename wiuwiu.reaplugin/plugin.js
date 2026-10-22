@@ -21,7 +21,7 @@ function createPlugin(host) {
   "use strict";
 
   var PLUGIN_ID = "wiuwiu.reaplugin";
-  var VERSION = "0.2.1";
+  var VERSION = "0.3.0";
 
   var WS_URL = "ws://localhost:8080/ws/v1/machine/raw";
   var STATE_URL = "http://localhost:8080/api/v1/machine/state";
@@ -61,8 +61,8 @@ function createPlugin(host) {
     breathingColor: "#FFD9A8",
     brightness: 100,
     frameIntervalMs: 80,
-    pressureMax: 12,
-    flowMax: 6
+    pressureMax: 10,
+    flowMax: 8
   };
 
   // ── clock seam (test-only) ────────────────────────────────────────────────
@@ -249,12 +249,15 @@ function createPlugin(host) {
       return { front: amber, back: amber };
     }
 
-    // pressure → back strip, dim blue-green to bright green
+    // pressure → back strip: dim teal at 0 bar to bright green at the max, blue
+    // draining out as it rises. The full 40..255 green travel is what makes the
+    // strip readable from across the room; a narrower band looked almost static.
     var tp = clamp01(pressure / settings.pressureMax);
-    var back = scaled(0, 60 + 195 * tp, 90 * (1 - tp), bright);
-    // flow → front strip, dim indigo to bright blue
+    var back = scaled(0, 40 + 215 * tp, 90 * (1 - tp), bright);
+    // flow → front strip: dark slate at 0 to full blue at the max, green draining
+    // out. Starting dim (60) instead of mid (120) roughly doubles the visible swing.
     var tf = clamp01(flow / settings.flowMax);
-    var front = scaled(0, 60 * (1 - tf), 120 + 135 * tf, bright);
+    var front = scaled(0, 90 * (1 - tf), 60 + 195 * tf, bright);
     return { front: front, back: back };
   }
 

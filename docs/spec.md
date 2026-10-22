@@ -22,7 +22,7 @@ Everything else stays inside that function's closure.
 
 ## Manifest
 
-* `id`: `wiuwiu.reaplugin`, `name`: `Wiu Wiu RGB`, `version`: `0.2.1`, `apiVersion`: 1,
+* `id`: `wiuwiu.reaplugin`, `name`: `Wiu Wiu RGB`, `version`: `0.3.0`, `apiVersion`: 1,
   `author`: `Vid`, `license`: `GPL-3.0-or-later`.
 * permissions: `log`, `api`, `events.machine`, `network.websocket`.
 * settings (every one needs `label` + `description`, `default` where sensible):
@@ -33,8 +33,8 @@ Everything else stays inside that function's closure.
 | `BreathingColor` | string | `#FFD9A8` | breathing colour, hex `#RRGGBB` (warm white) |
 | `Brightness` | number | `100` | 5–100, scales every colour |
 | `FrameIntervalMs` | number | `80` | 20–1000, animation frame spacing |
-| `PlaythroughPressureMax` | number | `12` | bar mapped to full green |
-| `PlaythroughFlowMax` | number | `6` | ml/s mapped to full blue |
+| `PlaythroughPressureMax` | number | `10` | bar mapped to full green |
+| `PlaythroughFlowMax` | number | `8` | ml/s mapped to full blue |
 
 Invalid/blank values fall back to the defaults above — never throw from `onLoad`.
 
@@ -55,10 +55,12 @@ All colours are `(r,g,b)` bytes, scaled by `Brightness/100`, and sent as
    `espresso`, `steam`, `flush`, `hotWater`. Every other state disengages it (see
    *Suspension*), so an idle machine keeps its own stored colours.
    * `backStrip` ← pressure, green ramp: `t = clamp(pressure / PlaythroughPressureMax, 0, 1)`,
-     `g = 60 + 195·t`, `r = 0`, `b = 90·(1 - t)` (dim blue-green → bright green; both
-     brightness **and** shade move).
+     `g = 40 + 215·t`, `r = 0`, `b = 90·(1 - t)` (dim teal → bright green; both
+     brightness **and** shade move). The widest green travel that still looks like
+     green — a narrower band read as almost static on the machine.
    * `frontStrip` ← flow, blue ramp: `t = clamp(flow / PlaythroughFlowMax, 0, 1)`,
-     `b = 120 + 135·t`, `r = 0`, `g = 60·(1 - t)` (dim indigo → bright blue).
+     `b = 60 + 195·t`, `r = 0`, `g = 90·(1 - t)` (dark slate → full blue). Starting
+     dark rather than mid-blue roughly doubles the visible swing over a shot.
    * `espresso`, `hotWater`, `flush` → the ramps above.
    * `steam` → warm amber `#FF9A3C` breathing, both strips (pressure/flow carry no
      meaning while steaming).

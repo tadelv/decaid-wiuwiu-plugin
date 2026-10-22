@@ -4,7 +4,7 @@
   "license": "GPL-3.0-or-later",
   "name": "Wiu Wiu RGB",
   "description": "Animates a Bengle's LED strips from machine state: rainbow, breathing or a playthrough colour ramp driven by pressure and flow.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "apiVersion": 1,
   "permissions": [
     "log",
@@ -45,14 +45,14 @@
     "PlaythroughPressureMax": {
       "type": "number",
       "label": "Pressure at full green",
-      "default": 12,
-      "description": "Bar that maps to a full green back strip in the playthrough preset."
+      "default": 10,
+      "description": "Bar that maps to a full green back strip in the playthrough preset. 10 covers a typical 9 bar shot; raise it if your shots peak higher."
     },
     "PlaythroughFlowMax": {
       "type": "number",
       "label": "Flow at full blue",
-      "default": 6,
-      "description": "Flow in ml/s that maps to a full blue front strip in the playthrough preset."
+      "default": 8,
+      "description": "Flow in ml/s that maps to a full blue front strip in the playthrough preset. 8 leaves headroom for the flow spike at the start of a shot."
     }
   },
   "api": [

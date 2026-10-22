@@ -353,8 +353,8 @@ test("1. manifest parses, declares ids/permissions/settings and the status endpo
   assert.equal(manifest.settings.BreathingColor.default, "#FFD9A8");
   assert.equal(manifest.settings.Brightness.default, 100);
   assert.equal(manifest.settings.FrameIntervalMs.default, 80);
-  assert.equal(manifest.settings.PlaythroughPressureMax.default, 12);
-  assert.equal(manifest.settings.PlaythroughFlowMax.default, 6);
+  assert.equal(manifest.settings.PlaythroughPressureMax.default, 10);
+  assert.equal(manifest.settings.PlaythroughFlowMax.default, 8);
 
   const statusEndpoint = manifest.api.find((e) => e.id === "status");
   assert.ok(statusEndpoint, "manifest declares the status endpoint");
@@ -400,11 +400,12 @@ test("criterion 2: raw write frames are 20-byte payloads with uppercase A006", a
   assert.equal(front.addr, FRONT_ADDR);
   assert.equal(back.addr, BACK_ADDR);
 
-  // pressure 0 / flow 0: back = (0, 60, 90) = 0x003C5A, front = (0, 60, 120) = 0x003C78
-  assert.equal(front.value, 0x003c78);
-  assert.equal(back.value, 0x003c5a);
-  assert.equal(front.payload, "04" + FRONT_ADDR + "783C0000" + "0".repeat(24));
-  assert.equal(back.payload, "04" + BACK_ADDR + "5A3C0000" + "0".repeat(24));
+  // pressure 0 / flow 0, defaults 10 bar / 8 ml/s: back = (0, 40, 90) = 0x00285A,
+  // front = (0, 90, 60) = 0x005A3C
+  assert.equal(front.value, 0x005a3c);
+  assert.equal(back.value, 0x00285a);
+  assert.equal(front.payload, "04" + FRONT_ADDR + "3C5A0000" + "0".repeat(24));
+  assert.equal(back.payload, "04" + BACK_ADDR + "5A280000" + "0".repeat(24));
   assert.equal(FRONT_ADDR, "803890", "frontLedColor 0x00803890 -> 80 38 90", );
   assert.equal(BACK_ADDR, "803894", "rearLedColor 0x00803894 -> 80 38 94");
   assert.equal(front.payload.length, 40, "payload is 20 bytes / 40 hex chars");
@@ -503,21 +504,21 @@ test("4. playthrough engages only for espresso, steam, flush and hotWater", asyn
     settings: {
       Preset: "playthrough",
       FrameIntervalMs: 100,
-      PlaythroughPressureMax: 12,
-      PlaythroughFlowMax: 6,
+      PlaythroughPressureMax: 10,
+      PlaythroughFlowMax: 8,
     },
   });
 
   // espresso at zero pressure/flow: the two ramps
   emitState(plugin, fetchApi, "espresso", 0, 0);
   await clock.advance(100);
-  assertChannels(backs(transport).at(-1), [0, 60, 90], "pressure 0: dim blue-green");
-  assertChannels(fronts(transport).at(-1), [0, 60, 120], "flow 0: dim indigo");
+  assertChannels(backs(transport).at(-1), [0, 40, 90], "pressure 0: dim teal");
+  assertChannels(fronts(transport).at(-1), [0, 90, 60], "flow 0: dark slate");
   const backZero = backs(transport).at(-1);
   const frontZero = fronts(transport).at(-1);
 
   // at max
-  emitState(plugin, fetchApi, "espresso", 12, 6);
+  emitState(plugin, fetchApi, "espresso", 10, 8);
   await clock.advance(100);
   const backMax = backs(transport).at(-1);
   const frontMax = fronts(transport).at(-1);
@@ -530,14 +531,14 @@ test("4. playthrough engages only for espresso, steam, flush and hotWater", asyn
 
   // the other two jobs engage with the same ramps
   for (const state of ["hotWater", "flush"]) {
-    emitState(plugin, fetchApi, state, 12, 6);
+    emitState(plugin, fetchApi, state, 10, 8);
     await clock.advance(100);
     assertChannels(backs(transport).at(-1), [0, 255, 0], `${state} uses the pressure ramp`);
     assertChannels(fronts(transport).at(-1), [0, 0, 255], `${state} uses the flow ramp`);
   }
 
   // steam → warm amber breathing on both strips (pressure/flow carry no meaning)
-  emitState(plugin, fetchApi, "steam", 12, 6);
+  emitState(plugin, fetchApi, "steam", 10, 8);
   await clock.advance(100);
   assertScaledFrom(fronts(transport).at(-1), [255, 154, 60], "steam amber");
   assert.equal(backs(transport).at(-1), fronts(transport).at(-1), "amber on both strips");
@@ -557,7 +558,7 @@ test("4. playthrough engages only for espresso, steam, flush and hotWater", asyn
     "busy", "skipStep", "cleaning", "descaling", "airPurge", "calibration", "selfTest",
     "error", "steamRinse", "schedIdle", "heating", "preheating", "needsWater", "booting", "wat",
   ]) {
-    emitState(plugin, fetchApi, state, 12, 6);
+    emitState(plugin, fetchApi, state, 10, 8);
     await clock.advance(200);
     assert.equal(transport.sent.length, painted, `${state} does not engage playthrough`);
     assert.equal(status(plugin).active, false, `${state} leaves it disengaged`);
@@ -565,7 +566,7 @@ test("4. playthrough engages only for espresso, steam, flush and hotWater", asyn
   assert.equal(status(plugin).restores, 1, "no restore storm while disengaged");
 
   // re-engaging resumes immediately and force-writes
-  emitState(plugin, fetchApi, "espresso", 12, 6);
+  emitState(plugin, fetchApi, "espresso", 10, 8);
   await clock.advance(100);
   assert.ok(transport.sent.length > painted, "frames resume on re-engagement");
   assert.equal(status(plugin).active, true);
@@ -810,8 +811,8 @@ test("11. the status endpoint reports live counters in the documented shape", as
   assert.equal(snapshot.framesSkipped, 0);
   assert.equal(snapshot.writesWritten, 2);
   assert.equal(snapshot.writesDeduped, 6);
-  assert.equal(snapshot.lastFront, "003C78");
-  assert.equal(snapshot.lastBack, "003C5A");
+  assert.equal(snapshot.lastFront, "005A3C");
+  assert.equal(snapshot.lastBack, "00285A");
   assert.equal(snapshot.lastFrameAt, new Date(T0 + 300).toISOString());
   assert.equal(snapshot.restores, 0);
   assert.equal(snapshot.lastError, null);
