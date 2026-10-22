@@ -12,7 +12,7 @@ the code.
 wiuwiu.reaplugin/manifest.json
 wiuwiu.reaplugin/plugin.js      # defines global function createPlugin(host)
 test/plugin.test.mjs            # node --test, no dependencies
-package.json                    # { "scripts": { "test": "npm test" } }
+package.json                    # { "scripts": { "test": "node --test" } }
 ```
 
 `plugin.js` is a host script, not an ES module: it must define
@@ -174,7 +174,7 @@ a string (`plugins_handler.dart` `_handlePluginApiEndpoint`,
 helper and assert on it in tests, plus one test that the envelope's `body` parses back to
 the same object and `status === 200`.
 
-## Tests (`test/plugin.test.mjs`, `node --test`)
+## Tests (`test/plugin.test.mjs`, `npm test`)
 
 Fake host: records `log`, `emit`, `storage`, provides `transport` with a scriptable
 sink, and a `fetch` that answers the two GETs and the restore POSTs. Drive time with an
