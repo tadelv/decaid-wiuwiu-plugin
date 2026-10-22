@@ -1,7 +1,26 @@
 # Wiu Wiu RGB
 
+<p align="center">
+  <img src="docs/media/rainbow.gif" width="330" alt="Bengle LED strips cycling through the rainbow preset">
+</p>
+
 A [Decaid](https://github.com/decentespresso/decaid) plugin that turns a Bengle's
 LED strips into a disco light, driven by what the machine is actually doing.
+
+## In action
+
+**`rainbow`** — the strips walk the hue wheel and the whole room follows.
+
+<img src="docs/media/rainbow.gif" width="330" alt="rainbow preset">
+
+**`playthrough`** — during a shot the back strip's green follows pressure and the
+front strip's blue follows flow; when the shot ends it lets go and the machine's own
+warm palette comes back (that is the amber at the end of the clip, not a preset).
+
+<img src="docs/media/playthrough.gif" width="400" alt="playthrough preset during a shot">
+
+Both clips are trimmed from phone footage and quantised to GIF — the encode is
+reproducible with `./scripts/media.sh <rainbow|playthrough> <source.MOV>`.
 
 Three presets, chosen in Decaid's plugin settings:
 
