@@ -25,16 +25,35 @@ REST round trip per frame.
 
 ## Install
 
-Decaid's REST API only installs plugins from GitHub, so a local build is copied
-onto the device and enabled over REST:
+Decaid's REST API only installs plugins from GitHub, so a local build goes on the
+tablet one of two ways:
+
+**Release build (what the machine's tablet runs).** The APK is not debuggable, so
+`adb` cannot write into its storage. Stage a zip and install it from the UI:
 
 ```sh
-./scripts/deploy.sh            # adb push + restart Decaid + enable + verify
+./scripts/pack.sh                       # -> dist/wiuwiu.reaplugin.zip
+adb push dist/wiuwiu.reaplugin.zip /sdcard/Download/
+# on the tablet: Settings -> Plugins -> (menu) Install plugin -> From zip
 ```
 
-Requires the host on the same network (default `de1tablet.home:8080`), `adb` with
-the tablet attached, and a **debuggable** Decaid build (the tablet's build is
-signed with `android/app/debug.keystore`, so `run-as` works).
+Then enable it and pick a preset over REST:
+
+```sh
+curl -X POST http://<host>:8080/api/v1/plugins/wiuwiu.reaplugin/enable
+curl -X POST http://<host>:8080/api/v1/plugins/wiuwiu.reaplugin/settings \
+  -H 'content-type: application/json' -d '{"Preset":"rainbow"}'
+./scripts/verify.sh
+```
+
+**Debuggable build (local dev).** `./scripts/deploy.sh [preset]` pushes the folder
+with `adb push` + `run-as`, restarts Decaid so the startup plugin scan sees it,
+enables it and selects the preset. It refuses to run unless the attached device's
+IP matches the API's `localIp` — more than one Decaid on a network is normal, and
+deploying to the wrong one looks like success and changes nothing.
+
+Either way, `preset=rainbow` is the default the plugin ships with, so a fresh
+install animates as soon as it loads.
 
 ## Status
 
@@ -46,7 +65,13 @@ way to confirm it is actually animating.
 
 ```sh
 node --test test/
+node scripts/live-sim.mjs      # run the plugin against a live instance, no Decaid needed
 ```
 
 No dependencies, no build step: `plugin.js` is the artifact Decaid loads, and the
 tests evaluate it in a `vm` context with a fake host.
+
+`scripts/live-sim.mjs` is the end-to-end check: it shims the host API onto Node's
+`WebSocket`/`fetch`, runs the real `plugin.js` against `de1tablet.home:8080` for a
+few seconds (the strips actually animate), prints the status counters, and calls
+`onUnload` so the machine gets its stored palette back.
