@@ -22,11 +22,29 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 [ -f "$SRC/manifest.json" ] && [ -f "$SRC/plugin.js" ] || die "plugin files missing in $SRC"
 adb get-state >/dev/null 2>&1 || die "no adb device attached"
 
+# Refuse to deploy to the wrong box: the attached adb device must be the same host
+# that serves $HOST. Two Decaid installs on one network is a real setup (an older
+# dev tablet beside the machine's), and pushing to the wrong one silently does
+# nothing visible.
+API_IP="$(curl -sf -m 5 "http://$HOST/api/v1/info" | sed -n 's/.*"localIp":"\([^"]*\)".*/\1/p')"
+ADB_IPS="$(adb shell ip -4 addr show 2>/dev/null | tr -d '\r' | sed -n 's/.*inet \([0-9.]*\)\/.*/\1/p' | grep -v '^127\.')"
+if [ -z "$API_IP" ]; then
+  die "cannot read localIp from http://$HOST/api/v1/info"
+elif ! printf '%s\n' "$ADB_IPS" | grep -qx "$API_IP"; then
+  die "attached adb device ($(printf '%s' "$ADB_IPS" | tr '\n' ' ')) is not $HOST ($API_IP) — refusing to install on the wrong Decaid"
+fi
+printf 'target: %s (%s), adb device matches\n' "$HOST" "$API_IP"
+
 say "pushing plugin to $PKG"
 adb push "$SRC/." "$TMP/" >/dev/null
 adb shell run-as "$PKG" mkdir -p "app_flutter/plugins/$ID"
-adb shell run-as "$PKG" sh -c "cp $TMP/manifest.json $TMP/plugin.js app_flutter/plugins/$ID/" \
+# Two plain copy commands, no nested shell: `sh -c` through adb re-splits the quoting.
+adb shell run-as "$PKG" cp "$TMP/manifest.json" "app_flutter/plugins/$ID/manifest.json" \
   || die "copy into app storage failed (is the build debuggable?)"
+adb shell run-as "$PKG" cp "$TMP/plugin.js" "app_flutter/plugins/$ID/plugin.js" \
+  || die "copy into app storage failed (is the build debuggable?)"
+adb shell run-as "$PKG" ls "app_flutter/plugins/$ID" | tr -d '\r' | grep -q plugin.js \
+  || die "plugin.js did not land in app storage"
 
 say "restarting Decaid so the plugin scan picks it up"
 adb shell am force-stop "$PKG"
