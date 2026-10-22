@@ -1,0 +1,32 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      # The asset root is the plugin folder, which is what Decaid's
+      # resolvePluginPackage() accepts for "install/github-release".
+      - run: ./scripts/pack.sh
+      - name: Check the tag matches the manifest version
+        run: |
+          version=$(node -p "require('./wiuwiu.reaplugin/manifest.json').version")
+          test "v$version" = "${GITHUB_REF_NAME}" || {
+            echo "tag ${GITHUB_REF_NAME} does not match manifest v$version" >&2
+            exit 1
+          }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/wiuwiu.reaplugin.zip
+          generate_release_notes: true
