@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // node --test test/ — no dependencies.
 //
 // The plugin is a host script, not a module: plugin.js defines a global
@@ -319,7 +320,9 @@ test("1. manifest parses, declares ids/permissions/settings and the status endpo
   // The version the plugin reports must be the manifest's, or status/update checks lie.
   assert.equal(loadPlugin({}).plugin.version, manifest.version, "manifest and plugin versions agree");
   assert.equal(manifest.apiVersion, 1);
-  assert.equal(manifest.author, "tadelv");
+  assert.equal(typeof manifest.author, "string");
+  assert.ok(manifest.author.length > 0, "manifest declares an author");
+  assert.equal(manifest.license, "GPL-3.0-or-later", "manifest declares the licence");
 
   assert.deepEqual(
     [...manifest.permissions].sort(),

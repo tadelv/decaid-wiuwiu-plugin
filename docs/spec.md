@@ -22,8 +22,8 @@ Everything else stays inside that function's closure.
 
 ## Manifest
 
-* `id`: `wiuwiu.reaplugin`, `name`: `Wiu Wiu RGB`, `version`: `0.1.0`, `apiVersion`: 1,
-  `author`: `tadelv`.
+* `id`: `wiuwiu.reaplugin`, `name`: `Wiu Wiu RGB`, `version`: `0.1.2`, `apiVersion`: 1,
+  `author`: `Wiu Wiu RGB contributors`, `license`: `GPL-3.0-or-later`.
 * permissions: `log`, `api`, `events.machine`, `network.websocket`.
 * settings (every one needs `label` + `description`, `default` where sensible):
 

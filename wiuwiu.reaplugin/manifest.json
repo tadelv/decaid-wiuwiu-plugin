@@ -1,9 +1,10 @@
 {
   "id": "wiuwiu.reaplugin",
-  "author": "tadelv",
+  "author": "Wiu Wiu RGB contributors",
+  "license": "GPL-3.0-or-later",
   "name": "Wiu Wiu RGB",
   "description": "Animates a Bengle's LED strips from machine state: rainbow, breathing or a playthrough colour ramp driven by pressure and flow.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "apiVersion": 1,
   "permissions": [
     "log",

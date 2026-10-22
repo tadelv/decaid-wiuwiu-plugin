@@ -72,6 +72,11 @@ No dependencies, no build step: `plugin.js` is the artifact Decaid loads, and th
 tests evaluate it in a `vm` context with a fake host.
 
 `scripts/live-sim.mjs` is the end-to-end check: it shims the host API onto Node's
-`WebSocket`/`fetch`, runs the real `plugin.js` against `de1tablet.home:8080` for a
-few seconds (the strips actually animate), prints the status counters, and calls
-`onUnload` so the machine gets its stored palette back.
+`WebSocket`/`fetch`, runs the real `plugin.js` against a live instance for a few
+seconds (the strips actually animate), prints the status counters, and calls
+`onUnload` so the machine gets its stored palette back. Point it at your instance
+with `DECAID_HOST=decaid.local:8080`.
+
+## Licence
+
+GPL-3.0-or-later. See [LICENSE](LICENSE).

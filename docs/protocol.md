@@ -1,8 +1,8 @@
 # Decaid ↔ Bengle LED protocol reference
 
 Everything below was read from `decentespresso/decaid` at `main` (HEAD
-`c723a39d`, 2026-10-21) and/or verified against the live instance at
-`de1tablet.home:8080` (Bengle, serial 11431, Decaid 0.9.0).
+`c723a39d`, 2026-10-21) and/or verified live against a Bengle on
+Decaid `0.9.1-beta.1+3012`, connected over USB.
 
 Clone used for reference: `/tmp/decaid` (full history, depth 1 at fetch time).
 
@@ -54,7 +54,7 @@ so the wire value is `(R << 16) | (G << 8) | B` with `R,G,B` in `0..255`.
 
 `ws://<decaid-host>:8080/ws/v1/machine/raw`
 
-Bidirectional. Verified live on 2026-10-21/22 against `de1tablet.home:8080`.
+Bidirectional. Verified live against a Bengle on Decaid `0.9.1-beta.1`.
 
 ### Writing
 
@@ -234,7 +234,7 @@ adb shell run-as net.tadel.reaprime sh -c \
 # restart decaid so the plugin scan sees it, then enable (sets autoLoad)
 adb shell am force-stop net.tadel.reaprime
 adb shell am start -n net.tadel.reaprime/.MainActivity
-curl -X POST http://de1tablet.home:8080/api/v1/plugins/wiuwiu.reaplugin/enable
+curl -X POST http://<host>:8080/api/v1/plugins/wiuwiu.reaplugin/enable
 ```
 
 `run-as` needs a debuggable APK, which is why the tablet build is a debug/profile

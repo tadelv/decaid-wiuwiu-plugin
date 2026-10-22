@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Run wiuwiu.reaplugin outside Decaid, against a live instance, through a host
 // shim that implements only what the plugin uses (transport.open/onEvent/send/
 // close, log, fetch, timers). This is how the plugin's real network behaviour —
@@ -8,13 +9,13 @@
 //
 //   node scripts/live-sim.mjs                    # 12 s of rainbow
 //   SIM_PRESET=playthrough SIM_SECONDS=20 node scripts/live-sim.mjs
-//   DECAID_HOST=de1tablet.home:8080 node scripts/live-sim.mjs
+//   DECAID_HOST=decaid.local:8080 node scripts/live-sim.mjs
 import fs from "node:fs";
 import vm from "node:vm";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const HOST = process.env.DECAID_HOST || "de1tablet.home:8080";
+const HOST = process.env.DECAID_HOST || "localhost:8080";
 const SECONDS = Number(process.env.SIM_SECONDS || 12);
 const PRESET = process.env.SIM_PRESET || "rainbow";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

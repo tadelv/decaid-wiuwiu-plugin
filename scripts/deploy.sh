@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Install / update the Wiu Wiu RGB plugin on a Decaid tablet and enable it.
 #
 #   ./scripts/deploy.sh                 # push, restart Decaid, enable, preset=rainbow
 #   ./scripts/deploy.sh breathing       # same, but select another preset
-#   DECAID_HOST=de1tablet.home:8080 DECAID_PACKAGE=net.tadel.reaprime ./scripts/deploy.sh
+#   DECAID_HOST=decaid.local:8080 DECAID_PACKAGE=net.tadel.reaprime ./scripts/deploy.sh
 #
 # Requires: adb with the tablet attached, and a debuggable Decaid build (run-as).
 set -euo pipefail
 
-HOST="${DECAID_HOST:-de1tablet.home:8080}"
+HOST="${DECAID_HOST:-localhost:8080}"
 PKG="${DECAID_PACKAGE:-net.tadel.reaprime}"
 ID="wiuwiu.reaplugin"
 PRESET="${1:-rainbow}"

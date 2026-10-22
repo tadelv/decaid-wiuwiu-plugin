@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Build the installable plugin zip for Decaid's "Install plugin -> From zip".
 # The archive holds a single top-level folder containing manifest.json and
 # plugin.js, which is what resolvePluginPackage() accepts.
@@ -8,7 +9,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ID="wiuwiu.reaplugin"
-HOST="${DECAID_HOST:-de1tablet.home:8080}"
+HOST="${DECAID_HOST:-localhost:8080}"
 mkdir -p "$ROOT/dist"
 rm -f "$ROOT/dist/$ID.zip"
 (cd "$ROOT" && zip -qr "dist/$ID.zip" "$ID" -x '*.DS_Store')

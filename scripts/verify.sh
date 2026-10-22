@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Live check that the plugin is installed, enabled and actually animating.
 #
 #   ./scripts/verify.sh
-#   DECAID_HOST=de1tablet.home:8080 ./scripts/verify.sh
+#   DECAID_HOST=decaid.local:8080 ./scripts/verify.sh
 #
 # Exits non-zero if any assertion fails. Read-only: it never writes the machine.
 set -euo pipefail
 
-HOST="${DECAID_HOST:-de1tablet.home:8080}"
+HOST="${DECAID_HOST:-localhost:8080}"
 ID="wiuwiu.reaplugin"
 BASE="http://$HOST"
 
