@@ -12,7 +12,7 @@ the code.
 wiuwiu.reaplugin/manifest.json
 wiuwiu.reaplugin/plugin.js      # defines global function createPlugin(host)
 test/plugin.test.mjs            # node --test, no dependencies
-package.json                    # { "scripts": { "test": "node --test test/" } }
+package.json                    # { "scripts": { "test": "npm test" } }
 ```
 
 `plugin.js` is a host script, not an ES module: it must define

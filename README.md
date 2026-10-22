@@ -88,7 +88,7 @@ way to confirm it is actually animating.
 ## Develop
 
 ```sh
-node --test test/
+npm test
 node scripts/live-sim.mjs      # run the plugin against a live instance, no Decaid needed
 ```
 
