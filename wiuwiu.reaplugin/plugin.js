@@ -492,7 +492,13 @@ function createPlugin(host) {
         return writeRegister(BACK_ADDR, frame.back);
       })
       .then(function (completed) {
-        if (completed === false) return;
+        if (completed === false) {
+          // No transport available, or the machine went to sleep mid-frame: this
+          // tick produced no frame, and framesSent + framesSkipped should still
+          // account for it.
+          stats.framesSkipped += 1;
+          return;
+        }
         stats.framesSent += 1;
         lastFrameAt = at;
       })
