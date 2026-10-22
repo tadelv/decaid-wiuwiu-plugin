@@ -3,7 +3,7 @@
   "author": "tadelv",
   "name": "Wiu Wiu RGB",
   "description": "Animates a Bengle's LED strips from machine state: rainbow, breathing or a playthrough colour ramp driven by pressure and flow.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "apiVersion": 1,
   "permissions": [
     "log",

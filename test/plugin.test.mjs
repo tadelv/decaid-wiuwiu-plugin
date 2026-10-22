@@ -315,7 +315,9 @@ test("1. manifest parses, declares ids/permissions/settings and the status endpo
 
   assert.equal(manifest.id, PLUGIN_ID);
   assert.equal(manifest.name, "Wiu Wiu RGB");
-  assert.equal(manifest.version, "0.1.0");
+  assert.match(manifest.version, /^\d+\.\d+\.\d+$/, "manifest carries a semver version");
+  // The version the plugin reports must be the manifest's, or status/update checks lie.
+  assert.equal(loadPlugin({}).plugin.version, manifest.version, "manifest and plugin versions agree");
   assert.equal(manifest.apiVersion, 1);
   assert.equal(manifest.author, "tadelv");
 
@@ -358,7 +360,7 @@ test("1. manifest parses, declares ids/permissions/settings and the status endpo
   // module shape / bare-vm loadability
   const { plugin, context } = loadPlugin();
   assert.equal(plugin.id, PLUGIN_ID);
-  assert.equal(plugin.version, "0.1.0");
+  assert.equal(plugin.version, manifest.version, "plugin version matches the manifest");
   for (const member of ["onLoad", "onEvent", "onUnload"]) {
     assert.equal(typeof plugin[member], "function", `plugin exposes ${member}`);
   }
@@ -1136,4 +1138,42 @@ test("regression: unload restores from the palette over the still-open transport
   assert.equal(restores[0].value, 0xffd9a8, "front <- frontStrip.awake high bytes");
   assert.equal(restores[1].value, 0x00ff00, "back <- backStrip.awake high bytes");
   assert.deepEqual(transport.closed, ["h1"], "transport closed once the restore settled");
+});
+
+test("regression: a stale REST snapshot cannot wake a sleeping machine", async () => {
+  const clock = createClock(T0);
+  const transport = createTransport();
+  const fetchApi = createFetch();
+  const { plugin } = loadPlugin({ clock, transport, fetchApi, settings: { FrameIntervalMs: 100 } });
+  await clock.advance(0); // load-time poll (no timestamp on the fake's default body)
+
+  const sleeping = {
+    timestamp: new Date(T0 + 1000).toISOString(),
+    state: { state: "sleeping", substate: "idle" },
+    pressure: 0,
+    flow: 0,
+  };
+  fetchApi.state = sleeping;
+  plugin.onEvent({ name: "stateUpdate", payload: sleeping });
+  await clock.advance(100);
+
+  const asleep = status(plugin);
+  assert.equal(asleep.active, false, "suspended on the sleep event");
+  assert.equal(asleep.restores, 1, "one restore for the transition");
+
+  // The 5 s heartbeat now answers with a snapshot taken BEFORE the sleep event: the
+  // REST body can lag the event stream, and applying it would paint the strip again.
+  fetchApi.state = {
+    timestamp: new Date(T0).toISOString(),
+    state: { state: "idle", substate: "idle" },
+    pressure: 0,
+    flow: 0,
+  };
+  await clock.advance(5200);
+
+  const after = status(plugin);
+  assert.equal(after.state, "sleeping", "the stale poll is ignored");
+  assert.equal(after.active, false, "still suspended");
+  assert.equal(after.framesSent, asleep.framesSent, "no frame is painted after the stale poll");
+  assert.equal(after.restores, 1, "no second restore");
 });

@@ -18,7 +18,7 @@ function createPlugin(host) {
   "use strict";
 
   var PLUGIN_ID = "wiuwiu.reaplugin";
-  var VERSION = "0.1.0";
+  var VERSION = "0.1.1";
 
   var WS_URL = "ws://localhost:8080/ws/v1/machine/raw";
   var STATE_URL = "http://localhost:8080/api/v1/machine/state";
@@ -86,6 +86,11 @@ function createPlugin(host) {
   var pressure = 0;
   var flow = 0;
   var suspended = false;
+  // Machine-clock timestamp of the newest snapshot applied. The event stream and the
+  // REST heartbeat describe the same thing at different latencies, so an older poll
+  // answer can arrive after a newer event and would otherwise un-suspend a sleeping
+  // machine for a moment (observed: a second restore and 3 frames after sleep).
+  var lastSnapshotAt = null;
 
   var frameTimer = null;
   var heartbeatTimer = null;
@@ -514,6 +519,14 @@ function createPlugin(host) {
   // ── machine state ─────────────────────────────────────────────────────────
   function applySnapshot(payload) {
     if (!payload || typeof payload !== "object") return;
+
+    // Newest wins. Both sources carry the machine's own timestamp, so ordering them
+    // is exact; an unparsable or absent timestamp is still applied (be permissive).
+    var at = typeof payload.timestamp === "string" ? Date.parse(payload.timestamp) : NaN;
+    if (Number.isFinite(at)) {
+      if (lastSnapshotAt !== null && at < lastSnapshotAt) return;
+      lastSnapshotAt = at;
+    }
 
     var state = payload.state;
     if (state && typeof state === "object") {

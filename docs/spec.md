@@ -114,6 +114,9 @@ All colours are `(r,g,b)` bytes, scaled by `Brightness/100`, and sent as
 
 * `onEvent` with `name === "stateUpdate"` → cache `payload.state.state`,
   `payload.state.substate`, `payload.pressure`, `payload.flow`.
+* Newest snapshot wins. Both sources carry the machine's own `timestamp`; a snapshot
+  older than the last one applied is ignored, because the REST body can lag the event
+  stream and would otherwise un-suspend a machine that is already going to sleep.
 * Seed and heartbeat: `fetch("http://localhost:8080/api/v1/machine/state")` on load and
   every 5000 ms while loaded. A failed poll keeps the last known state and is visible in
   `status.lastError`; it must not stop the animation loop.
