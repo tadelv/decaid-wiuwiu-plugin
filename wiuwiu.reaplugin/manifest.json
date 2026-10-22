@@ -1,0 +1,69 @@
+{
+  "id": "wiuwiu.reaplugin",
+  "author": "tadelv",
+  "name": "Wiu Wiu RGB",
+  "description": "Animates a Bengle's LED strips from machine state: rainbow, breathing or a playthrough colour ramp driven by pressure and flow.",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "permissions": [
+    "log",
+    "api",
+    "events.machine",
+    "network.websocket"
+  ],
+  "settings": {
+    "Preset": {
+      "type": "enum",
+      "label": "Preset",
+      "values": [
+        "rainbow",
+        "breathing",
+        "playthrough"
+      ],
+      "default": "rainbow",
+      "description": "Active effect: a rotating rainbow, a slow breathing pulse of BreathingColor, or a colour ramp driven by live pressure and flow."
+    },
+    "BreathingColor": {
+      "type": "string",
+      "label": "Breathing colour",
+      "default": "#FFD9A8",
+      "description": "Colour the breathing preset pulses with, as hex #RRGGBB. A warm white by default."
+    },
+    "Brightness": {
+      "type": "number",
+      "label": "Brightness",
+      "default": 100,
+      "description": "Scales every colour, 5 to 100 percent. Values outside that range fall back to 100."
+    },
+    "FrameIntervalMs": {
+      "type": "number",
+      "label": "Frame interval (ms)",
+      "default": 80,
+      "description": "Spacing between animation frames in milliseconds, 20 to 1000. Lower is smoother and writes the LED registers more often."
+    },
+    "PlaythroughPressureMax": {
+      "type": "number",
+      "label": "Pressure at full green",
+      "default": 12,
+      "description": "Bar that maps to a full green back strip in the playthrough preset."
+    },
+    "PlaythroughFlowMax": {
+      "type": "number",
+      "label": "Flow at full blue",
+      "default": 6,
+      "description": "Flow in ml/s that maps to a full blue front strip in the playthrough preset."
+    }
+  },
+  "api": [
+    {
+      "id": "status",
+      "type": "http",
+      "data": {
+        "body": {
+          "type": "string",
+          "description": "JSON snapshot: active preset and machine state, transport state, frame/write/dedupe/restore counters, last written colours, last error, live pressure and flow, and uptime."
+        }
+      }
+    }
+  ]
+}

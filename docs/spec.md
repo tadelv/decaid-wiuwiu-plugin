@@ -95,11 +95,15 @@ All colours are `(r,g,b)` bytes, scaled by `Brightness/100`, and sent as
 
 ```js
 { type: "request", operation: "write", characteristicUUID: "A006",
-  payload: "04" + "003890" + <uint32 LE value, 8 hex chars> + "00".repeat(12) }
+  payload: "04" + "803890" + <uint32 LE value, 8 hex chars> + "00".repeat(12) }
 ```
 
   That is exactly 20 bytes / 40 hex characters, matching the fixed 20-byte buffer
-  Decaid itself sends. `frontLedColor` = `0x00803890`, `rearLedColor` = `0x00803894`.
+  Decaid itself sends. The address bytes are the 32-bit big-endian address with
+  its first byte replaced by the length: `0x00803890` → `803890` for
+  `frontLedColor`, `0x00803894` → `803894` for `rearLedColor`. (`00 38 90` is
+  address `0x003890`, which is not the LED register — and Decaid echoes a write
+  response either way, so an acknowledgement proves nothing about the target.)
 * At most one frame in flight: if the previous `send` has not settled, skip this frame and
   count it. Serialise per frame: send front, then back, awaiting each (a rejected send
   marks the transport dead).
@@ -140,9 +144,24 @@ All colours are `(r,g,b)` bytes, scaled by `Brightness/100`, and sent as
 }
 ```
 
-Endpoint handler signature is `(body) => ({...})` for an HTTP endpoint (see the
-`time-to-ready` bundled plugin for the host shape; return a plain object, the host
-serialises it).
+Endpoint handler: the plugin exports `handleHttpRequest(request)` and returns (or
+resolves to) the host envelope, not a bare object:
+
+```js
+{
+  requestId: request.requestId,
+  status: 200,
+  headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+  body: JSON.stringify(statusSnapshot())   // string, not an object
+}
+```
+
+The host passes `body` straight through to `Response(status, body: body)`, so it must be
+a string (`plugins_handler.dart` `_handlePluginApiEndpoint`,
+`plugin_manager.dart` `__dispatchPluginHttp`; the shipped pattern is
+`assets/plugins/settings.reaplugin/plugin.js`). Keep `statusSnapshot()` as an internal
+helper and assert on it in tests, plus one test that the envelope's `body` parses back to
+the same object and `status === 200`.
 
 ## Tests (`test/plugin.test.mjs`, `node --test`)
 

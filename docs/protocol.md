@@ -69,14 +69,21 @@ Request frame:
 | offset | content |
 | --- | --- |
 | 0 | payload length in bytes (`04`) |
-| 1..3 | MMR address, big-endian, low 24 bits (`00 38 90` for `0x00803890`) |
+| 1..3 | MMR address: full 32-bit address big-endian, **first byte overwritten by the length** (`80 38 90` for `0x00803890`) |
 | 4..7 | value, **uint32 little-endian** |
 | 8..19 | zero padding |
 
-So `frontLedColor = 0x000030` encodes as `04` `003890` `30 00 00 00` + 12 zero
-bytes, i.e. the 40-hex-character string
-`0400389030000000` + `000000000000000000000000` (20 bytes total, matching the
-fixed 20-byte buffer `_mmrWriteRawPermitted` builds).
+So `frontLedColor = 0x000030` encodes as `04` `803890` `30 00 00 00` + 12 zero
+bytes, i.e. the 40-hex-character string `0480389030000000` followed by 24 zeros
+(20 bytes total, matching the fixed 20-byte buffer `_mmrWriteRawPermitted`
+builds).
+
+The address bytes are the **four-byte big-endian address with its first byte
+replaced by the length**: `0x00803890` → `00 80 38 90` → `04 80 38 90`. They are
+*not* the low 24 bits (`00 38 90`) — that writes address `0x003890`, which is not
+the LED register. Decaid still echoes a write response for any `A006` frame, so
+an acknowledgement does not prove the register existed (measured: the wrong
+`00 38 90` frame also answers).
 
 Success response (echo, empty payload):
 

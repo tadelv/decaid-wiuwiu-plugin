@@ -1,0 +1,7 @@
+{
+  "name": "wiuwiu-reaplugin",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/"
+  }
+}
