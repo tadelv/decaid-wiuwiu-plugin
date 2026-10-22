@@ -9,11 +9,13 @@ Three presets, chosen in Decaid's plugin settings:
 | --- | --- |
 | `rainbow` (default) | cycles the whole strip through the hue wheel, all zones together |
 | `breathing` | one colour (default warm white) fading 0 → full → 0, all zones together |
-| `playthrough` | back strip shows **pressure** as a green ramp, front strip shows **flow** as a blue ramp, shade and brightness both move with the reading; steam goes amber, errors go red, idle breathes a dim teal |
+| `playthrough` | only while the machine is doing one of its four jobs — back strip shows **pressure** as a green ramp, front strip shows **flow** as a blue ramp, shade and brightness both move with the reading; `steam` goes amber. Outside `espresso`/`steam`/`flush`/`hotWater` it disengages and hands the strips back to their stored colours |
 
 When the machine sleeps the plugin stops writing frames and hands the strips back
-to the stored palette, so the machine's own sleep/wake colours win. When it wakes
-up, the animation resumes on its own.
+to the stored palette, so the machine's own sleep/wake colours win. The same happens
+when a `playthrough` run ends: it only engages for `espresso`, `steam`, `flush` and
+`hotWater`, and lets go as soon as the machine leaves them. When the machine wakes up
+or the next job starts, the animation resumes on its own.
 
 It talks to the machine the fast way: raw MMR writes to the two live LED
 registers over Decaid's `/ws/v1/machine/raw` WebSocket, one frame per zone, no

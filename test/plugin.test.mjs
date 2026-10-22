@@ -491,7 +491,7 @@ test("3. breathing peaks at t=2000 and is dark at t=0 and t=4000 with BreathingC
 });
 
 // ── 4. playthrough ────────────────────────────────────────────────────────────
-test("4. playthrough splits strips by pressure/flow and maps machine states", async () => {
+test("4. playthrough engages only for espresso, steam, flush and hotWater", async () => {
   const clock = createClock(T0);
   const transport = createTransport();
   const fetchApi = createFetch();
@@ -508,65 +508,70 @@ test("4. playthrough splits strips by pressure/flow and maps machine states", as
     },
   });
 
-  const stateUpdate = (state, press, flowRate) => emitState(plugin, fetchApi, state, press, flowRate);
-
-  // pressures/flows at 0
-  stateUpdate("espresso", 0, 0);
-  await clock.advance(0);
+  // espresso at zero pressure/flow: the two ramps
+  emitState(plugin, fetchApi, "espresso", 0, 0);
+  await clock.advance(100);
   assertChannels(backs(transport).at(-1), [0, 60, 90], "pressure 0: dim blue-green");
   assertChannels(fronts(transport).at(-1), [0, 60, 120], "flow 0: dim indigo");
+  const backZero = backs(transport).at(-1);
+  const frontZero = fronts(transport).at(-1);
 
-  // pressures/flows at max
-  stateUpdate("espresso", 12, 6);
+  // at max
+  emitState(plugin, fetchApi, "espresso", 12, 6);
   await clock.advance(100);
   const backMax = backs(transport).at(-1);
   const frontMax = fronts(transport).at(-1);
   assertChannels(backMax, [0, 255, 0], "pressure max: bright green");
   assertChannels(frontMax, [0, 0, 255], "flow max: bright blue");
-  assert.ok(channels(backMax)[1] > channels(backs(transport)[0])[1], "green rises with pressure");
-  assert.ok(channels(backMax)[2] < channels(backs(transport)[0])[2], "blue falls with pressure");
-  assert.ok(channels(frontMax)[2] > channels(fronts(transport)[0])[2], "blue rises with flow");
-  assert.ok(channels(frontMax)[1] < channels(fronts(transport)[0])[1], "green falls with flow");
+  assert.ok(channels(backMax)[1] > channels(backZero)[1], "green rises with pressure");
+  assert.ok(channels(backMax)[2] < channels(backZero)[2], "blue falls with pressure");
+  assert.ok(channels(frontMax)[2] > channels(frontZero)[2], "blue rises with flow");
+  assert.ok(channels(frontMax)[1] < channels(frontZero)[1], "green falls with flow");
 
-  // ramp states all behave like espresso
-  for (const state of ["hotWater", "flush", "busy", "skipStep", "cleaning", "descaling", "airPurge", "calibration", "selfTest"]) {
-    stateUpdate(state, 12, 6);
+  // the other two jobs engage with the same ramps
+  for (const state of ["hotWater", "flush"]) {
+    emitState(plugin, fetchApi, state, 12, 6);
     await clock.advance(100);
     assertChannels(backs(transport).at(-1), [0, 255, 0], `${state} uses the pressure ramp`);
+    assertChannels(fronts(transport).at(-1), [0, 0, 255], `${state} uses the flow ramp`);
   }
-
-  // idle → soft teal glow at 25 % brightness (peak alpha at t = 6000 is 2000 + cycle)
-  stateUpdate("idle", 0, 0);
-  await clock.advance(100);
-  const glow = fronts(transport).at(-1);
-  assertScaledFrom(glow, [30, 110, 110], "idle teal glow");
-  assert.equal(backs(transport).at(-1), glow, "idle glow is on both strips");
-  assert.ok(channels(glow)[1] > 0 && channels(glow)[1] <= 30, "teal glow is dim");
-
-  for (const state of ["schedIdle", "heating", "preheating", "needsWater", "booting", "wat"]) {
-    stateUpdate(state, 12, 6);
-    await clock.advance(100);
-    assertScaledFrom(fronts(transport).at(-1), [30, 110, 110], `${state} falls back to the ready glow`);
-  }
-
-  // error → dim red breathing on both strips
-  stateUpdate("error", 0, 0);
-  await clock.advance(100);
-  assertScaledFrom(fronts(transport).at(-1), [200, 30, 30], "error red breathing");
-  assert.equal(backs(transport).at(-1), fronts(transport).at(-1), "error colour on both strips");
 
   // steam → warm amber breathing on both strips (pressure/flow carry no meaning)
-  stateUpdate("steam", 12, 6);
+  emitState(plugin, fetchApi, "steam", 12, 6);
   await clock.advance(100);
   assertScaledFrom(fronts(transport).at(-1), [255, 154, 60], "steam amber");
   assert.equal(backs(transport).at(-1), fronts(transport).at(-1), "amber on both strips");
 
-  stateUpdate("steamRinse", 12, 6);
+  // leaving the four disengages: no more frames, palette handed back once
+  const painted = transport.sent.length;
+  emitState(plugin, fetchApi, "idle", 0, 0);
+  await clock.advance(500);
+  assert.equal(transport.sent.length, painted, "no writes once disengaged");
+  assert.equal(status(plugin).active, false, "status reports inactive");
+  assert.equal(status(plugin).restores, 1, "hands the strips back once");
+  assert.equal(fetchApi.count("POST", CLEAR_URL), 1, "via preview/clear");
+
+  // every other state stays disengaged, and repeated non-engaging states do not
+  // restore again (no storm)
+  for (const state of [
+    "busy", "skipStep", "cleaning", "descaling", "airPurge", "calibration", "selfTest",
+    "error", "steamRinse", "schedIdle", "heating", "preheating", "needsWater", "booting", "wat",
+  ]) {
+    emitState(plugin, fetchApi, state, 12, 6);
+    await clock.advance(200);
+    assert.equal(transport.sent.length, painted, `${state} does not engage playthrough`);
+    assert.equal(status(plugin).active, false, `${state} leaves it disengaged`);
+  }
+  assert.equal(status(plugin).restores, 1, "no restore storm while disengaged");
+
+  // re-engaging resumes immediately and force-writes
+  emitState(plugin, fetchApi, "espresso", 12, 6);
   await clock.advance(100);
-  assertScaledFrom(fronts(transport).at(-1), [255, 154, 60], "steamRinse amber");
+  assert.ok(transport.sent.length > painted, "frames resume on re-engagement");
+  assert.equal(status(plugin).active, true);
+  assert.equal(status(plugin).restores, 1, "no extra restore on re-engagement");
 });
 
-// ── 5. sleeping ───────────────────────────────────────────────────────────────
 test("5. sleeping sends no frames and restores exactly once per transition", async () => {
   const clock = createClock(T0);
   const transport = createTransport();

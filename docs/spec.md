@@ -51,33 +51,39 @@ All colours are `(r,g,b)` bytes, scaled by `Brightness/100`, and sent as
    the colour; the switch follows the front strip automatically.
 2. **breathing** — `BreathingColor` with
    `alpha = (1 - cos(2π · t / 4000)) / 2` (0 → 1 → 0 over 4 s), applied to all three zones.
-3. **playthrough** — splits the two strips by state:
+3. **playthrough** — engages only while the machine is doing one of its four jobs:
+   `espresso`, `steam`, `flush`, `hotWater`. Every other state disengages it (see
+   *Suspension*), so an idle machine keeps its own stored colours.
    * `backStrip` ← pressure, green ramp: `t = clamp(pressure / PlaythroughPressureMax, 0, 1)`,
      `g = 60 + 195·t`, `r = 0`, `b = 90·(1 - t)` (dim blue-green → bright green; both
      brightness **and** shade move).
    * `frontStrip` ← flow, blue ramp: `t = clamp(flow / PlaythroughFlowMax, 0, 1)`,
      `b = 120 + 135·t`, `r = 0`, `g = 60·(1 - t)` (dim indigo → bright blue).
-   * `espresso`, `hotWater`, `flush`, `busy`, `skipStep`, `cleaning`, `descaling`,
-     `airPurge`, `calibration`, `selfTest` → the ramps above.
-   * `steam`, `steamRinse` → warm amber `#FF9A3C` breathing, both strips (pressure/flow
-     carry no meaning there).
-   * `error` → dim red `#C81E1E` breathing on both strips.
-   * `idle`, `schedIdle`, `heating`, `preheating`, `needsWater`, `booting`, unknown →
-     soft teal `#1E6E6E` breathing at 25 % brightness on both strips (a "ready" glow,
-     so an idle machine is not black).
-   * `sleeping`, `goingToSleep` → suspended (see below) for every preset.
+   * `espresso`, `hotWater`, `flush` → the ramps above.
+   * `steam` → warm amber `#FF9A3C` breathing, both strips (pressure/flow carry no
+     meaning while steaming).
+   * Everything else (`idle`, `busy`, `cleaning`, `error`, `steamRinse`, …) → disengaged:
+     no frames, and the stored palette is restored once on the transition out.
 
 ## Suspension and restore
 
-* `sleeping` or `goingToSleep` → **no frames at all**. Cancel the frame timer, cancel any
-  in-flight retry, and run the restore exactly once per transition into sleep.
+A preset is suspended — no frames at all, stored palette restored once per transition —
+when either:
+
+* the machine is `sleeping` or `goingToSleep` (every preset), or
+* the preset is `playthrough` and the current state is not `espresso`, `steam`, `flush`
+  or `hotWater`.
+
+While suspended the state heartbeat keeps running, so engagement is immediate when one
+of those states comes round. No snapshot at all (`machineState === null`, i.e. the first
+poll has not landed yet) also means no frames.
 * Restore order: `POST http://localhost:8080/api/v1/machine/ledStrip/preview/clear`
   (`{}` body). On any failure, `GET /api/v1/machine/ledStrip` and raw-write
   `frontLedColor`/`rearLedColor` with the palette colour of the current phase
   (`sleeping ? *.sleeping : *.awake`, high byte of each 16-bit channel). On failure of
   that too, give up silently and log once.
-* Wake (any non-sleep state) → read the settings again is unnecessary; just resume the
-  loop, forcing the next frame to be written (clear the "last written" cache).
+* Wake or re-engage (any animating state) → resume the loop and force the next frame to
+  be written (clear the "last written" cache).
 * `onUnload()` → stop timers, close the transport, run the same restore once (best effort;
   do not await it in a way that can hang the unload — but do start it).
 

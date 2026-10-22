@@ -21,7 +21,7 @@ function createPlugin(host) {
   "use strict";
 
   var PLUGIN_ID = "wiuwiu.reaplugin";
-  var VERSION = "0.1.2";
+  var VERSION = "0.2.0";
 
   var WS_URL = "ws://localhost:8080/ws/v1/machine/raw";
   var STATE_URL = "http://localhost:8080/api/v1/machine/state";
@@ -50,13 +50,11 @@ function createPlugin(host) {
   var RECONNECT_DELAYS_MS = [1000, 2000, 5000, 10000];
 
   var PRESETS = ["rainbow", "breathing", "playthrough"];
-  var RAMP_STATES = [
-    "espresso", "hotWater", "flush", "busy", "skipStep", "cleaning",
-    "descaling", "airPurge", "calibration", "selfTest"
-  ];
+  // playthrough only engages for these four machine states; everything else hands the
+  // strips back to the stored palette (the machine's own colours) until one of them
+  // comes round again.
+  var ENGAGING_STATES = ["espresso", "steam", "flush", "hotWater"];
   var AMBER = [255, 154, 60];
-  var ERROR_RED = [200, 30, 30];
-  var READY_TEAL = [30, 110, 110];
 
   var DEFAULTS = {
     preset: "rainbow",
@@ -244,32 +242,20 @@ function createPlugin(host) {
   }
 
   function playthroughFrame(t, bright) {
-    var state = machineState;
-
-    if (state === "steam" || state === "steamRinse") {
+    // Only reachable while a state in ENGAGING_STATES is current (see shouldAnimate).
+    if (machineState === "steam") {
+      // Pressure and flow carry no meaning while steaming.
       var amber = breatheValue(AMBER, t, bright);
       return { front: amber, back: amber };
     }
 
-    if (state === "error") {
-      var red = breatheValue(ERROR_RED, t, bright);
-      return { front: red, back: red };
-    }
-
-    if (RAMP_STATES.indexOf(state) >= 0) {
-      // pressure → back strip, dim blue-green to bright green
-      var tp = clamp01(pressure / settings.pressureMax);
-      var back = scaled(0, 60 + 195 * tp, 90 * (1 - tp), bright);
-      // flow → front strip, dim indigo to bright blue
-      var tf = clamp01(flow / settings.flowMax);
-      var front = scaled(0, 60 * (1 - tf), 120 + 135 * tf, bright);
-      return { front: front, back: back };
-    }
-
-    // idle, schedIdle, heating, preheating, needsWater, booting, unknown: a dim
-    // teal ready glow at 25 % brightness, so an idle machine is not black.
-    var glow = breatheValue(READY_TEAL, t, bright * 0.25);
-    return { front: glow, back: glow };
+    // pressure → back strip, dim blue-green to bright green
+    var tp = clamp01(pressure / settings.pressureMax);
+    var back = scaled(0, 60 + 195 * tp, 90 * (1 - tp), bright);
+    // flow → front strip, dim indigo to bright blue
+    var tf = clamp01(flow / settings.flowMax);
+    var front = scaled(0, 60 * (1 - tf), 120 + 135 * tf, bright);
+    return { front: front, back: back };
   }
 
   function computeFrame(t) {
@@ -546,23 +532,38 @@ function createPlugin(host) {
     syncSuspension();
   }
 
-  function syncSuspension() {
-    var sleeping = machineState === "sleeping" || machineState === "goingToSleep";
-    if (sleeping === suspended) return;
-    suspended = sleeping;
-    if (sleeping) enterSleep();
-    else wake();
+  // Whether this preset should be painting at all in the current machine state.
+  // rainbow/breathing run whenever the machine is awake; playthrough runs only while
+  // the machine is actually doing one of its four jobs.
+  function shouldAnimate() {
+    if (machineState === null) return false;
+    if (machineState === "sleeping" || machineState === "goingToSleep") return false;
+    if (settings.preset !== "playthrough") return true;
+    return ENGAGING_STATES.indexOf(machineState) >= 0;
   }
 
-  function enterSleep() {
-    // No frames at all while asleep: stop the loop, drop any in-flight retry and
-    // hand the live registers back once for this transition only. The restore
-    // waits for the frame already handed to the transport, so a late write cannot
-    // land after the palette has been restored.
+  function syncSuspension() {
+    var suspendedNow = !shouldAnimate();
+    if (suspendedNow === suspended) return;
+    suspended = suspendedNow;
+    if (suspendedNow) {
+      enterSuspend(machineState === "sleeping" || machineState === "goingToSleep"
+        ? "sleep"
+        : "disengaged");
+    } else {
+      wake();
+    }
+  }
+
+  function enterSuspend(reason) {
+    // No frames at all while suspended: stop the loop, drop any in-flight retry and
+    // hand the live registers back for this transition only. The restore waits for
+    // the frame already handed to the transport, so a late write cannot land after
+    // the palette has been restored.
     stopFrameLoop();
     stopRetry();
     retryIndex = 0;
-    startRestore("sleep", framePromise);
+    startRestore(reason, framePromise);
   }
 
   function wake() {

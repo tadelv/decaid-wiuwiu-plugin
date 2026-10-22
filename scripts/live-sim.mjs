@@ -93,12 +93,23 @@ const last = seen.at(-1) || {};
 console.log(`\n[sim] after unload: restores=${after.restores} transport=${after.transport}`);
 
 const problems = [];
-if (!last.framesSent) problems.push("no frames were sent — the strips never lit");
-if (!last.writesWritten) problems.push("no register writes were accepted");
-if (last.lastFront && last.lastFront === seen[0]?.lastFront && PRESET === "rainbow") {
-  problems.push("the colour never changed in rainbow mode");
+// No frames is the correct outcome while the machine is asleep or its state is not yet
+// known, and while playthrough is disengaged (it only paints the machine's four jobs).
+const engaging = ["espresso", "steam", "flush", "hotWater"];
+const asleep = last.state === null || ["sleeping", "goingToSleep"].includes(last.state);
+const disengaged = asleep || (PRESET === "playthrough" && !engaging.includes(last.state));
+if (disengaged) {
+  console.log(`\n[sim] nothing to paint: state ${last.state}` +
+    (PRESET === "playthrough" ? " (playthrough disengaged)" : ""));
+  if (last.framesSent > 0) problems.push(`painted ${last.framesSent} frames while ${last.state}`);
+} else {
+  if (!last.framesSent) problems.push("no frames were sent — the strips never lit");
+  if (!last.writesWritten) problems.push("no register writes were accepted");
+  if (last.lastFront && last.lastFront === seen[0]?.lastFront && PRESET === "rainbow") {
+    problems.push("the colour never changed in rainbow mode");
+  }
 }
-if (after.restores < 1) problems.push("unload did not restore the stored palette");
+if (after.restores < 1 && !asleep) problems.push("unload did not restore the stored palette");
 if (last.lastError) problems.push(`last error: ${last.lastError}`);
 
 for (const line of logs) console.log("[plugin]", line);
