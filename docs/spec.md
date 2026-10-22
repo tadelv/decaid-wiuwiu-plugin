@@ -95,10 +95,11 @@ All colours are `(r,g,b)` bytes, scaled by `Brightness/100`, and sent as
 
 ```js
 { type: "request", operation: "write", characteristicUUID: "A006",
-  payload: "04" + "003890" + <uint32 LE value, 8 hex chars> + "00".repeat(8) }
+  payload: "04" + "003890" + <uint32 LE value, 8 hex chars> + "00".repeat(12) }
 ```
 
-  `frontLedColor` = `0x00803890`, `rearLedColor` = `0x00803894`.
+  That is exactly 20 bytes / 40 hex characters, matching the fixed 20-byte buffer
+  Decaid itself sends. `frontLedColor` = `0x00803890`, `rearLedColor` = `0x00803894`.
 * At most one frame in flight: if the previous `send` has not settled, skip this frame and
   count it. Serialise per frame: send front, then back, awaiting each (a rejected send
   marks the transport dead).

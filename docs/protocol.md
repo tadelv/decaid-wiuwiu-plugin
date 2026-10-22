@@ -73,8 +73,10 @@ Request frame:
 | 4..7 | value, **uint32 little-endian** |
 | 8..19 | zero padding |
 
-So `frontLedColor = 0x000030` encodes as `04003890 30 00 00 00` + 16 zero bytes
-= `0400389030000000` followed by 32 zeros.
+So `frontLedColor = 0x000030` encodes as `04` `003890` `30 00 00 00` + 12 zero
+bytes, i.e. the 40-hex-character string
+`0400389030000000` + `000000000000000000000000` (20 bytes total, matching the
+fixed 20-byte buffer `_mmrWriteRawPermitted` builds).
 
 Success response (echo, empty payload):
 
