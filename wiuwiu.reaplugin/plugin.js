@@ -1,7 +1,7 @@
 /* wiuwiu.reaplugin — Wiu Wiu RGB
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
- * Copyright (C) 2026 Wiu Wiu RGB contributors
+ * Copyright (C) 2026 Vid
  *
  * Host contract (doc/Plugins.md §2): this is a host script, not a module. It
  * defines the global function createPlugin(host) and returns
@@ -21,7 +21,7 @@ function createPlugin(host) {
   "use strict";
 
   var PLUGIN_ID = "wiuwiu.reaplugin";
-  var VERSION = "0.2.0";
+  var VERSION = "0.2.1";
 
   var WS_URL = "ws://localhost:8080/ws/v1/machine/raw";
   var STATE_URL = "http://localhost:8080/api/v1/machine/state";
